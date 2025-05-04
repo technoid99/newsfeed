@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manage feeds source .json files</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+      line-height: 1.6;
+    }
+
+    h1, h2 {
+      margin-bottom: 12px;
+    }
+
+    label {
+      font-weight: 600;
+      display: block;
+      margin: 12px 0 6px;
+    }
+
+    input[type="text"], select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 12px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      font-family: monospace;
+      resize: vertical;
+    }
+
+    button {
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #1565c0;
+    }
+
+    .feed-entry {
+      border: 1px solid #eee;
+      background: #fafafa;
+      padding: 12px;
+      margin-bottom: 12px;
+      border-radius: 4px;
+    }
+
+    .feed-entry strong {
+      font-size: 1.1em;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .feed-entry a {
+      color: #1976d2;
+      word-break: break-word;
+    }
+
+    .feed-entry small {
+      color: #666;
+      display: block;
+      margin-top: 4px;
+    }
+
+    .feed-entry button {
+      background-color: #e53935;
+      margin-top: 8px;
+    }
+
+    .feed-entry button:hover {
+      background-color: #c62828;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .hint {
+      font-size: 0.9em;
+      color: #555;
+    }
+
+    code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <h1>You are looking at RSS sources file: <code id="fileLabel">feeds.json</code></h1>
+
+  <div class="row">
+    <label for="fileSelect">Choose a feed file:</label>
+    <select id="fileSelect"></select>
+    <button onclick="handleFileChange()">Open</button>
+  </div>
+
+  <h2>Add RSS Feed</h2>
+
+  <label for="source">Source Name:</label>
+  <small class="hint">This is what you'll see in the Sources dropdown</small>
+  <input id="source" type="text" placeholder="e.g. Google News - Tech" />
+
+  <label for="url">RSS Feed URL:</label>
+  <input id="url" type="text" placeholder="Paste the RSS feed URL here" />
+
+  <button onclick="addFeed()">Add New Feed</button>
+
+  <h2>Current Feeds</h2>
+  <div id="feedsList"></div>
+
+  <h2>Raw JSON: <code id="fileLabel2">feeds.json</code></h2>
+  <textarea id="feedsText" rows="20"></textarea>
+  <p><strong>IMPORTANT:</strong> You haven't not yet modified anything permanently. You must copy this text and manually modify the .json file in your Github respository.</p>
+  <button onclick="copyJsonToClipboard()">Copy JSON to Clipboard</button>
+  <p class="hint">⚙️ After copying, edit <code id="fileCodeLabel">feeds.json</code> manually through GitHub and replace its contents with the new version.</p>
+
+<script>
+let feeds = [];
+let currentFile = "feeds/feeds.json";
+
+async function generateUniqueId(url) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(url);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const base64String = btoa(String.fromCharCode(...hashArray))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+  return base64String;
+}
+
+async function loadFeeds(filePath) {
+  currentFile = filePath;
+  try {
+    const response = await fetch(filePath);
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+    feeds = await response.json();
+    updateFeedsDisplay();
+    updateFeedsText();
+    updateFileLabels();
+  } catch (error) {
+    alert(`Failed to load ${filePath}.\n` + error);
+    feeds = [];
+    updateFeedsDisplay();
+    updateFeedsText();
+  }
+}
+
+function handleFileChange() {
+  const selected = document.getElementById("fileSelect").value;
+  loadFeeds(selected);
+}
+
+function updateFileLabels() {
+  const filename = currentFile.split("/").pop();
+  document.getElementById("fileLabel").textContent = filename;
+  document.getElementById("fileLabel2").textContent = filename;
+  document.getElementById("fileCodeLabel").textContent = filename;
+}
+
+function extractSearchQuery(url) {
+  const queryStart = url.indexOf("?q=");
+  if (queryStart !== -1) {
+    let queryPart = url.substring(queryStart + 3);
+    const ampIndex = queryPart.indexOf("&");
+    if (ampIndex !== -1) {
+      queryPart = queryPart.substring(0, ampIndex);
+    }
+    return decodeURIComponent(queryPart);
+  }
+  return null;
+}
+
+function updateFeedsDisplay() {
+  const listDiv = document.getElementById('feedsList');
+  listDiv.innerHTML = "";
+
+  feeds.forEach((feed, index) => {
+    const entryDiv = document.createElement('div');
+    entryDiv.className = "feed-entry";
+
+    let html = `<strong>${feed.source}</strong>`;
+    html += `<a href="${feed.url}" target="_blank">${feed.url}</a><br>`;
+
+    const decodedQuery = extractSearchQuery(feed.url);
+    if (decodedQuery) {
+      html += `<small>🔍 ${decodedQuery}</small>`;
+    }
+
+    html += `<button onclick="deleteFeed(${index})">Delete</button>`;
+    entryDiv.innerHTML = html;
+    listDiv.appendChild(entryDiv);
+  });
+}
+
+function updateFeedsText() {
+  document.getElementById('feedsText').value = JSON.stringify(feeds, null, 2);
+}
+
+async function addFeed() {
+  const source = document.getElementById('source').value.trim();
+  const url = document.getElementById('url').value.trim();
+
+  if (!source || !url) {
+    alert("Please enter both a source name and URL.");
+    return;
+  }
+
+  const uniqueid = await generateUniqueId(url);
+
+  const newFeed = {
+    source: source,
+    url: url,
+    uniqueid: uniqueid
+  };
+
+  feeds.unshift(newFeed);
+  updateFeedsDisplay();
+  updateFeedsText();
+
+  document.getElementById('source').value = '';
+  document.getElementById('url').value = '';
+}
+
+function deleteFeed(index) {
+  if (confirm("Are you sure you want to delete this feed?")) {
+    feeds.splice(index, 1);
+    updateFeedsDisplay();
+    updateFeedsText();
+  }
+}
+
+function copyJsonToClipboard() {
+  const text = document.getElementById('feedsText').value;
+  navigator.clipboard.writeText(text)
+    .then(() => alert(`Copied! Now go to GitHub, open and edit your ${currentFile.split("/").pop()} file, delete the old contents, and paste the new version you just copied.`))
+    .catch(err => alert("Failed to copy: " + err));
+}
+
+async function populateFileList() {
+  const select = document.getElementById("fileSelect");
+  try {
+    const response = await fetch("feeds/index.txt");
+    const text = await response.text();
+    const fileList = text.split("\n").filter(Boolean);
+    select.innerHTML = "";
+    fileList.forEach(file => {
+      const option = document.createElement("option");
+      option.value = file;
+      option.textContent = file.split("/").pop();
+      select.appendChild(option);
+    });
+    if (fileList.length > 0) {
+      loadFeeds(fileList[0]);
+    }
+  } catch (err) {
+    alert("Could not load feed index. Check feeds/index.txt exists.");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", populateFileList);
+</script>
+</body>
+</html>
