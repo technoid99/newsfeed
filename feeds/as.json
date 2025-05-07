@@ -1,7 +1,17 @@
 [
-    {
-        "source": "知乎日报",
-        "url": "https://rsseverything.com/feed/490.xml",
-        "uniqueid": "hL9oNeY6fNKtqgqxL77LFww8FeYerJOWGi3labGoZsI"
-    }
+  {
+    "source": "The Diplomat",
+    "url": "https://thediplomat.com/feed/",
+    "uniqueid": "vxgoprs6i1jpn3na3UhuE8wIZsQPEZD3I9xYDNfx3kA"
+  },
+  {
+    "source": "Bangkok Post - Top Stories",
+    "url": "https://www.bangkokpost.com/rss/data/topstories.xml",
+    "uniqueid": "DB8TrCuntt7TVd50TqIlBhpMe9E5ppH5UKt8HH0bAis"
+  },
+  {
+    "source": "Nikkei Asia",
+    "url": "https://asia.nikkei.com/rss/feed/nar",
+    "uniqueid": "x4mR9I7ASgTTsW5FGJnCgqoPq2efnwgPiunRvbNp334"
+  }
 ]
